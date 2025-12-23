@@ -6,42 +6,51 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current directory and its parent directories
   const env = loadEnv(mode, process.cwd(), '');
+  const isProduction = mode === 'production';
 
   return {
     // Base public path when served in production
-    base: './', // Required for Vercel deployment to handle routing correctly
+    base: isProduction ? '/' : '/',
     
     // Development server configuration
     server: {
       host: "::",
       port: 8080,
       strictPort: true,
-      open: mode === 'development', // Open browser on dev server start
+      open: !isProduction,
     },
     
     // Build configuration
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: mode === 'development',
-      minify: mode === 'production' ? 'esbuild' : false,
-      cssMinify: mode === 'production',
+      sourcemap: !isProduction,
+      minify: isProduction ? 'esbuild' : false,
+      cssMinify: isProduction,
       emptyOutDir: true,
       rollupOptions: {
         output: {
+          entryFileNames: 'assets/[name].[hash].js',
+          chunkFileNames: 'assets/[name].[hash].js',
+          assetFileNames: 'assets/[name].[hash][extname]',
           manualChunks: {
-            // Split vendor libraries into separate chunks
             react: ['react', 'react-dom', 'react-router-dom'],
             vendor: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
           },
         },
       },
+      // Ensure proper chunking for Vercel
+      chunkSizeWarningLimit: 1000,
     },
     
     // Plugins
     plugins: [
-      react(),
-      mode === "development" && componentTagger()
+      react({
+        // Enable Fast Refresh
+        jsxImportSource: '@emotion/react',
+        tsDecorators: true,
+      }),
+      !isProduction && componentTagger()
     ].filter(Boolean),
     
     // Module resolution
@@ -58,19 +67,39 @@ export default defineConfig(({ mode }) => {
     
     // Optimize dependencies
     optimizeDeps: {
-      include: ['react', 'react-dom'],
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        '@radix-ui/react-dialog',
+        '@radix-ui/react-dropdown-menu'
+      ],
       esbuildOptions: {
-        // Enable esbuild's tree shaking
         target: 'es2020',
+        // Node.js global to browser globalThis
+        define: {
+          global: 'globalThis',
+        },
       },
     },
     
     // CSS configuration
     css: {
-      devSourcemap: mode === 'development',
+      devSourcemap: !isProduction,
       modules: {
         localsConvention: 'camelCaseOnly',
       },
+      preprocessorOptions: {
+        scss: {
+          additionalData: `@import "@/styles/variables";`
+        }
+      }
+    },
+    
+    // Handle Vercel rewrites for SPA routing
+    preview: {
+      port: 8080,
+      strictPort: true,
     },
   };
 });
