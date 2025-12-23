@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     // Base public path when served in production
-    base: '/', // Change this if your app is served from a subdirectory
+    base: './', // Required for Vercel deployment to handle routing correctly
     
     // Development server configuration
     server: {
@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
       sourcemap: mode === 'development',
       minify: mode === 'production' ? 'esbuild' : false,
       cssMinify: mode === 'production',
+      emptyOutDir: true,
       rollupOptions: {
         output: {
           manualChunks: {
