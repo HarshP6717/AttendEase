@@ -14,7 +14,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
 
   return {
     // Base public path when served in production
-    base: isProduction ? '/' : '/',
+    base: './',
     
     // Development server configuration
     server: {
@@ -28,7 +28,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: !isProduction,
+      sourcemap: isProduction ? 'hidden' : false,
       minify: isProduction ? 'esbuild' : false,
       cssMinify: isProduction,
       emptyOutDir: true,
@@ -45,6 +45,9 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
               if (id.includes('@radix-ui')) {
                 return 'vendor-radix';
               }
+              if (id.includes('@tanstack/query')) {
+                return 'vendor-query';
+              }
               return 'vendor';
             }
           },
@@ -52,9 +55,6 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       },
       chunkSizeWarningLimit: 1000,
       target: 'es2020',
-      modulePreload: {
-        polyfill: true,
-      },
     },
     
     // Plugins
@@ -62,7 +62,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       react({
         // Enable Fast Refresh
         jsxImportSource: '@emotion/react',
-        tsDecorators: true,
+        babel: {
+          plugins: [
+            ['@babel/plugin-proposal-decorators', { legacy: true }],
+          ],
+        },
       })
     ],
     
